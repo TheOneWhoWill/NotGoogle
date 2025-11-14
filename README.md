@@ -18,8 +18,41 @@ The full text will be used to create an inverted index for search queries. This 
 
 ## Imporovements to be made
 - Using a traditional database that can scale beyond my PC's storage limits. Currently using SQLite for simplicity.
+- Store full text in an s3 bucket or similar object storage to save space on the database.
 - Implementing a more robust crawling mechanism that respects `robots.txt` and handles rate limiting.
 - Enhancing the metadata extraction process to include more relevant information such as keywords, author, publication date, etc.
 
 ## Under Consideration
 - The use of vector embeddings to allow for semantic search capabilities. Vector similarity would be performed on the final few results as a last step after traditional ranking algorithms have been applied. The reason why pure vector search is not being considered is because of the high computational cost and complexity involved in maintaining a vector database for a large corpus of documents. There is also the issue of a website being relevant but not credible (prevent AI slop results), which traditional ranking algorithms can help mitigate.
+
+## Tables Used
+URL Lookup Table:
+- id (Primary Key)
+- canonical_url (Unique, also a secondary index)
+- last_crawled (Timestamp)
+
+Robots.txt Table:
+- website (Primary Key)
+- robots_txt_content (String)
+
+Crawled Data Table:
+- id (Integer Primary Key that references URL Lookup Table)
+- title (String)
+- meta_description (String)
+- full_text_path (String that points to object/local storage)
+- h1_text (String)
+- timestamp (Integer)
+
+Link Graph Table:
+- from_id (Integer)
+- to_id (Integer)
+- anchor_text (String)
+- Primary Key (from_id, to_id)
+
+Inverted Index Table:
+- term (Text Primary Key)
+- documents (Sorted Document Array)
+* Document Array Structure:
+	- doc_id (Integer)
+	- term_frequency (Integer)
+	- positions (Array of Integers)
