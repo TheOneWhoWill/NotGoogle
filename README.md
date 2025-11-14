@@ -16,5 +16,10 @@ The crawler extracts the following metadata from each web page:
 ## Full Text Search and Indexing
 The full text will be used to create an inverted index for search queries. This will allow us to get the intersection of the query keywords and quickly retrieve relevant documents which we will then apply page rank and other ranking algorithms on.
 
+## Imporovements to be made
+- Using a traditional database that can scale beyond my PC's storage limits. Currently using SQLite for simplicity.
+- Implementing a more robust crawling mechanism that respects `robots.txt` and handles rate limiting.
+- Enhancing the metadata extraction process to include more relevant information such as keywords, author, publication date, etc.
+
 ## Under Consideration
 - The use of vector embeddings to allow for semantic search capabilities. Vector similarity would be performed on the final few results as a last step after traditional ranking algorithms have been applied. The reason why pure vector search is not being considered is because of the high computational cost and complexity involved in maintaining a vector database for a large corpus of documents. There is also the issue of a website being relevant but not credible (prevent AI slop results), which traditional ranking algorithms can help mitigate.
