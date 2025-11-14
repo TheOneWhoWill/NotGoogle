@@ -14,7 +14,6 @@ class CrawlResponse:
 	full_text: str = ""
 	timestamp: int = 0
 	meta_description: str = ""
-	content_snippet: str = '[CONTENT_SNIPPET_NOT_FOUND_NGCRAWLER]'
 	# A list of # tags found on the page
 	anchor_tags: list[str] = []
 	links: list[str] = []
@@ -52,6 +51,7 @@ async def crawl_with_playwright(url) -> CrawlResponse:
 			elif soup.find('meta', attrs={'property': 'og:description'}):
 				meta_description = soup.find('meta', attrs={'property': 'og:description'})['content']
 			elif full_text:
+				## TODO: improve content snippet extraction to skip junk titles and other non-content text
 				meta_description = full_text[:160]
 			else:
 				meta_description = ""
@@ -78,7 +78,7 @@ async def crawl_with_playwright(url) -> CrawlResponse:
 				title=title,
 				timestamp=timestamp,
 				meta_description=meta_description,
-				content_snippet=content_snippet,
+				full_text=full_text,
 				links=list(links)
 			)
 
