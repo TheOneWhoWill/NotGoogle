@@ -15,3 +15,6 @@ The crawler extracts the following metadata from each web page:
 
 ## Full Text Search and Indexing
 The full text will be used to create an inverted index for search queries. This will allow us to get the intersection of the query keywords and quickly retrieve relevant documents which we will then apply page rank and other ranking algorithms on.
+
+## Under Consideration
+- The use of vector embeddings to allow for semantic search capabilities. Vector similarity would be performed on the final few results as a last step after traditional ranking algorithms have been applied. The reason why pure vector search is not being considered is because of the high computational cost and complexity involved in maintaining a vector database for a large corpus of documents. There is also the issue of a website being relevant but not credible (prevent AI slop results), which traditional ranking algorithms can help mitigate.
