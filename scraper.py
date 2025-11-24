@@ -72,9 +72,13 @@ def generate_crawl_response(soup: BeautifulSoup, url: str) -> CrawlResponse:
 
 async def crawl_with_httpx(url) -> CrawlResponse:
 	async with httpx.AsyncClient(timeout=1.0) as client:
-		soup = BeautifulSoup("", 'html.parser')
+		client.headers.update({
+			"User-Agent": "NotGoogle Crawler (Contact: muhammad.rafikov@oplex.us)"
+		})
 		try:
 			response = await client.get(url)
+			if response.status_code == 403:
+				return await crawl_with_playwright(url)
 			if response.status_code != 200:
 				raise Exception(f"Non-200 status code: {response.status_code}")
 
@@ -83,8 +87,10 @@ async def crawl_with_httpx(url) -> CrawlResponse:
 			is_spa_app = spa_detector.detect_spa(soup)
 			if is_spa_app:
 				# Skip SPA apps in this crawler
-				return await crawl_with_httpx(url)
+				return await crawl_with_playwright(url)
+			return generate_crawl_response(soup, url)
 		except Exception as e:
+			print(f"Error crawling {url}: {e}")
 			return_response = CrawlResponse(
 				url=url,
 				title="",
@@ -95,8 +101,6 @@ async def crawl_with_httpx(url) -> CrawlResponse:
 			)
 			return_response.set_failure()
 			return return_response
-
-		return generate_crawl_response(soup, url)
 
 async def crawl_with_playwright(url) -> CrawlResponse:
 	async with async_playwright() as p:
@@ -110,6 +114,8 @@ async def crawl_with_playwright(url) -> CrawlResponse:
 			await page.goto(url)
 			await page.wait_for_timeout(200)
 			rendered_html = await page.content()
+			# Pass any Are you a robot?
+			page.dblclick('body')
 			await browser.close()
 
 			soup = BeautifulSoup(rendered_html, 'html.parser')
@@ -129,16 +135,15 @@ async def crawl_with_playwright(url) -> CrawlResponse:
 
 async def main():
 	urls = [
-		"https://techcrunch.com/",
+		# "https://techcrunch.com/",
 		"https://www.bloomberg.com/",
-		"https://www.theverge.com/",
-		"https://www.wired.com/",
-		"https://www.cnet.com/"
+		# "https://www.theverge.com/",
+		# "https://www.wired.com/",
+		# "https://www.cnet.com/"
 	]
-	# Crawl in parallel
-	tasks = [crawl_with_httpx(url) for url in urls]
-	results = await asyncio.gather(*tasks)
-	for result in results:
+	# Crawl in sequence
+	for url in urls:
+		result = await crawl_with_httpx(url)
 		print(f"URL: {result.url}")
 		print(f"Title: {result.title}")
 		print(f"Timestamp: {result.timestamp}")
