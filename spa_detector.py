@@ -38,9 +38,18 @@ def extract_clean_text(html: BeautifulSoup | str) -> str:
 
 def detect_spa(html: BeautifulSoup | str) -> bool:
 	if isinstance(html, str):
+		# Quick check for non-HTML content to avoid parser warnings and overhead
+		stripped = html.lstrip()
+		if stripped.startswith(('<?xml', '{', '[')):
+			return False
+
 		soup = BeautifulSoup(html, 'html.parser')
 	else:
 		soup = html
+
+	# Check if the soup is html
+	if not soup.find('html'):
+		return False
 
 	# If there is no JS then it's definitely not an SPA
 	script_tags = soup.find_all('script')
