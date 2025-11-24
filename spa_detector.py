@@ -12,11 +12,10 @@ import re
 # Constants for SPA detection thresholds
 MIN_TEXT_LENGTH_SPA = 1200
 MIN_PURE_TEXT_NON_SPA = 300
-# Removed MAX_BODY_TEXT_FOR_SHELL and MAX_TEXT_FOR_STATIC_WITH_INPUTS to favor false positives
 FRAMEWORK_SIGNATURES = [
 	r'react', r'vue', r'angular', r'next', r'nuxt', r'gatsby', 
 	r'bundle\.js', r'main\.[a-z0-9]+\.js', r'chunk', r'vendor',
-	r'polymer', r'yt-player' # Added specific signatures for YouTube/Polymer
+	r'polymer', r'yt-player', r'ember', r'svelte'
 ]
 SPA_ROOTS = ['root', 'app', '__next', 'mount', 'trello-root', 'react-root', 'main-app']
 JUNK_TAGS = ["script", "style", "noscript", "svg", "path", "canvas", "head", "meta", "link"]
