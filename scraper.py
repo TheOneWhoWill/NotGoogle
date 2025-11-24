@@ -70,13 +70,13 @@ def generate_crawl_response(soup: BeautifulSoup, url: str) -> CrawlResponse:
 		links=list(links)
 	)
 
-async def crawl_with_httpx(url) -> CrawlResponse:
+async def scrape_with_httpx(url) -> CrawlResponse:
 	async with httpx.AsyncClient(timeout=1.0) as client:
 		client.headers.update({
 			"User-Agent": "NotGoogle Crawler (Contact: muhammad.rafikov@oplex.us)"
 		})
 		try:
-			response = await client.get(url)
+			response = await client.get(url, follow_redirects=True)
 			if response.status_code == 403:
 				return await crawl_with_playwright(url)
 			if response.status_code != 200:
@@ -102,7 +102,7 @@ async def crawl_with_httpx(url) -> CrawlResponse:
 			return_response.set_failure()
 			return return_response
 
-async def crawl_with_playwright(url) -> CrawlResponse:
+async def scrape_with_playwright(url) -> CrawlResponse:
 	async with async_playwright() as p:
 		browser = await p.chromium.launch(headless=True)
 		# Set user agent to mimic a real browser
@@ -114,8 +114,6 @@ async def crawl_with_playwright(url) -> CrawlResponse:
 			await page.goto(url)
 			await page.wait_for_timeout(200)
 			rendered_html = await page.content()
-			# Pass any Are you a robot?
-			page.dblclick('body')
 			await browser.close()
 
 			soup = BeautifulSoup(rendered_html, 'html.parser')
