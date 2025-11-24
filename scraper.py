@@ -78,7 +78,7 @@ async def scrape_with_httpx(url) -> CrawlResponse:
 		try:
 			response = await client.get(url, follow_redirects=True)
 			if response.status_code == 403:
-				return await crawl_with_playwright(url)
+				return await scrape_with_playwright(url)
 			if response.status_code != 200:
 				raise Exception(f"Non-200 status code: {response.status_code}")
 
@@ -87,7 +87,7 @@ async def scrape_with_httpx(url) -> CrawlResponse:
 			is_spa_app = spa_detector.detect_spa(soup)
 			if is_spa_app:
 				# Skip SPA apps in this crawler
-				return await crawl_with_playwright(url)
+				return await scrape_with_playwright(url)
 			return generate_crawl_response(soup, url)
 		except Exception as e:
 			print(f"Error crawling {url}: {e}")
@@ -141,7 +141,7 @@ async def main():
 	]
 	# Crawl in sequence
 	for url in urls:
-		result = await crawl_with_httpx(url)
+		result = await scrape_with_httpx(url)
 		print(f"URL: {result.url}")
 		print(f"Title: {result.title}")
 		print(f"Timestamp: {result.timestamp}")
