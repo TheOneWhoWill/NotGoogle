@@ -1,23 +1,13 @@
 import httpx
 import asyncio
 from normalize import normalize_webpage
+from scraper import scrape_with_httpx
 
-async def test_normalized_website(url: str):
-	# Add a user agent to avoid being blocked by some sites (like NYTimes)
-	headers = {
-		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-	}
-	# Increase timeout to 30 seconds and handle exceptions
-	async with httpx.AsyncClient(headers=headers, timeout=1.0) as client:
-		try:
-			# Fetch the html content
-			response = await client.get(url, follow_redirects=True)
-			result = normalize_webpage(response.text)
-			print(f"Normalized {url}: {len(result)} words")
-
-		except httpx.RequestError as exc:
-			print(f"An error occurred while requesting {exc.request.url!r}: {exc}")
-			return False
+async def test_normalized_website(url: str, words: set[str]):
+	response = await scrape_with_httpx(url)
+	result = normalize_webpage(response.full_text)
+	words.update(result)
+	print(f"Normalized {url}: {len(result)} words")
 
 async def run_tests():
 	# Test cases for normalization
@@ -41,8 +31,10 @@ async def run_tests():
 		"https://arxiv.org/",
 		"https://www.snopes.com/",
 	]
+	words: set[str] = set()
 	for url in test_urls:
-		await test_normalized_website(url)
+		await test_normalized_website(url, words)
+	print(f"Total unique words across all sites: {len(words)}")
 	
 if __name__ == "__main__":
 	asyncio.run(run_tests())
