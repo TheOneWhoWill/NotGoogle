@@ -76,14 +76,7 @@ async def crawl_with_httpx(url) -> CrawlResponse:
 		try:
 			response = await client.get(url)
 			if response.status_code != 200:
-				return CrawlResponse(
-					url=url,
-					title="",
-					timestamp=0,
-					meta_description="",
-					content_snippet="",
-					links=[]
-				)
+				raise Exception(f"Non-200 status code: {response.status_code}")
 
 			soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -150,7 +143,6 @@ async def main():
 		print(f"Title: {result.title}")
 		print(f"Timestamp: {result.timestamp}")
 		print(f"Meta Description: {result.meta_description}")
-		print(f"Content Snippet: {result.content_snippet}")
 		print(f"Links Found: {len(result.links)}")
 		print("-" * 80)
 
