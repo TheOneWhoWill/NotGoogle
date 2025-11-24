@@ -12,16 +12,13 @@ import re
 # Constants for SPA detection thresholds
 MIN_TEXT_LENGTH_SPA = 1200
 MIN_PURE_TEXT_NON_SPA = 300
-MAX_BODY_TEXT_FOR_SHELL = 11000
-MAX_TEXT_FOR_STATIC_WITH_INPUTS = 6000
+# Removed MAX_BODY_TEXT_FOR_SHELL and MAX_TEXT_FOR_STATIC_WITH_INPUTS to favor false positives
 FRAMEWORK_SIGNATURES = [
-    r'react', r'vue', r'angular', r'next', r'nuxt', r'gatsby', 
-    r'bundle\.js', r'main\.[a-z0-9]+\.js', r'chunk', r'vendor',
-    r'polymer', r'yt-player' # Added specific signatures for YouTube/Polymer
+	r'react', r'vue', r'angular', r'next', r'nuxt', r'gatsby', 
+	r'bundle\.js', r'main\.[a-z0-9]+\.js', r'chunk', r'vendor',
+	r'polymer', r'yt-player' # Added specific signatures for YouTube/Polymer
 ]
 SPA_ROOTS = ['root', 'app', '__next', 'mount', 'trello-root', 'react-root', 'main-app']
-INPUT_TAGS = ['input', 'button', 'select', 'textarea']
-INTERACTIVE_TAGS = ['form'] + INPUT_TAGS
 JUNK_TAGS = ["script", "style", "noscript", "svg", "path", "canvas", "head", "meta", "link"]
 
 def extract_clean_text(html: BeautifulSoup | str) -> str:
@@ -70,6 +67,11 @@ def detect_spa(html: BeautifulSoup | str) -> bool:
 			has_framework_js = True
 			break
 
+	# Aggressive check: If framework JS or blocking noscript is found, assume SPA.
+	# This favors false positives (rendering static sites) over false negatives (missing SPA content).
+	if has_framework_js or has_blocking_noscript:
+		return True
+
 	# Check for common SPA indicators
 	# Presence of specific div IDs or classes used by popular frameworks
 	for root_id in SPA_ROOTS:
@@ -80,19 +82,8 @@ def detect_spa(html: BeautifulSoup | str) -> bool:
 				return True
 
 	text_content = extract_clean_text(soup)
-	has_inputs = soup.find(INPUT_TAGS)
 
 	if len(text_content) < MIN_PURE_TEXT_NON_SPA:
 		return True
 
-	if (has_framework_js or has_blocking_noscript) and len(text_content) < MAX_BODY_TEXT_FOR_SHELL:
-		# If it has inputs, it's likely a static login page or SSR content, not an empty shell
-		if has_inputs:
-			# If the text content is substantial, it's likely an SPA with inputs (like Trello or React docs)
-			# rather than a simple static login page (like Github login)
-			if len(text_content) > MAX_TEXT_FOR_STATIC_WITH_INPUTS:
-				return True
-			return False
-		return True
-		
 	return False
