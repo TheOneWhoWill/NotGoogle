@@ -39,8 +39,7 @@ def extract_clean_text(html: BeautifulSoup | str) -> str:
 def detect_spa(html: BeautifulSoup | str) -> bool:
 	if isinstance(html, str):
 		# Quick check for non-HTML content to avoid parser warnings and overhead
-		stripped = html.lstrip()
-		if stripped.startswith(('<?xml', '{', '[')):
+		if html.lstrip().startswith(('<?xml', '{', '[')):
 			return False
 
 		soup = BeautifulSoup(html, 'html.parser')
@@ -48,7 +47,7 @@ def detect_spa(html: BeautifulSoup | str) -> bool:
 		soup = html
 
 	# Check if the soup is html
-	if not soup.find('html'):
+	if not soup.find('html') or not soup.find('body'):
 		return False
 
 	# If there is no JS then it's definitely not an SPA
@@ -63,12 +62,6 @@ def detect_spa(html: BeautifulSoup | str) -> bool:
 		noscript_text = noscript.get_text(strip=True).lower()
 		if 'enable javascript' in noscript_text or 'javascript is required' in noscript_text:
 			has_blocking_noscript = True
-	
-	# If your website doesn't have a body tag, something is very wrong
-	body = soup.find('body')
-	if not body:
-		# Not determinable, assume not an SPA, just a bad website
-		return False
 	
 	has_framework_js = False
 	for script in script_tags:
