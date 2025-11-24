@@ -76,3 +76,8 @@ Crawl Queue Table:
 - locked_by (String)
 - locked_at (Timestamp)
 - status (Enum: pending, in_progress, completed, failed)
+
+## Indexing Queue Table:
+- id (Integer Primary Key that references URL Lookup Table)
+- added_at (Timestamp)
+- status (Enum: pending, in_progress, completed, failed)
