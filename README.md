@@ -11,7 +11,6 @@ The crawler extracts the following metadata from each web page:
 - **Content Snippet**: A short snippet of text from the web page content, used for previewing search results. Used as a fallback for meta description.
 - **Full Text**: The complete text content of the web page
 - **H1 Text**: The text contained within the first `<h1>` tag on the page
-- **H2 Tags**: A list of texts contained within all `<h2>` tags on the page which can be used for easy sectional linking on a results page.
 
 ## Full Text Search and Indexing
 The full text will be used to create an inverted index for search queries. This will allow us to get the intersection of the query keywords and quickly retrieve relevant documents which we will then apply page rank and other ranking algorithms on.
@@ -29,11 +28,16 @@ The full text will be used to create an inverted index for search queries. This 
 URL Lookup Table:
 - id (Primary Key)
 - canonical_url (Unique, also a secondary index)
+- content_hash (String)
+- pagerank_score FLOAT
+- pagerank_updated_at TIMESTAMP
 - last_crawled (Timestamp)
 
 Robots.txt Table:
 - website (Primary Key)
 - robots_txt_content (String)
+- last_fetched (Timestamp)
+- sitemap_url (String)
 
 Crawled Data Table:
 - id (Integer Primary Key that references URL Lookup Table)
@@ -41,18 +45,34 @@ Crawled Data Table:
 - meta_description (String)
 - full_text_path (String that points to object/local storage)
 - h1_text (String)
+- http_status (Integer)
+- content_hash (String)
 - timestamp (Integer)
 
 Link Graph Table:
+- id (Integer Primary Key)
 - from_id (Integer)
 - to_id (Integer)
 - anchor_text (String)
-- Primary Key (from_id, to_id)
+- from_id and to_id are index and reference URL Lookup Table
 
 Inverted Index Table:
-- term (Text Primary Key)
-- documents (Sorted Document Array)
-* Document Array Structure:
-	- doc_id (Integer)
-	- term_frequency (Integer)
-	- positions (Array of Integers)
+- term_id (Integer Primary Key)
+- term (Text Unique)
+- document_frequency (Integer)
+
+Postings Table:
+- term_id (Integer)
+- doc_id (Integer)
+- term_frequency (Integer)
+- positions (Array of Integers)
+- Primary Key (term_id, doc_id)
+
+Crawl Queue Table:
+- id (Integer Primary Key that references URL Lookup Table)
+- priority (Integer)
+- added_at (Timestamp)
+- attempts (Integer)
+- locked_by (String)
+- locked_at (Timestamp)
+- status (Enum: pending, in_progress, completed, failed)
