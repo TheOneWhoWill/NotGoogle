@@ -12,25 +12,30 @@ def detect_spa(html: BeautifulSoup | str) -> bool:
 		soup = BeautifulSoup(html, 'html.parser')
 	else:
 		soup = html
-	# Check for common SPA indicators
-	# 1. Presence of specific div IDs or classes used by popular frameworks
-	spa_roots = ['root', 'app', '__next', 'mount']
-	for root_id in spa_roots:
-		if soup.find(id=root_id) and len(soup.get_text()) < 500:
-			return True
-	
-	# Check for suspiciously low amount of text content
-	for script in soup.find_all('script'):
+
+	# Remove script and style tags
+	for script in soup(["script", "style", "noscript"]):
 		# Remove script tags to avoid counting JS code as text
 		script.extract()
 
+	# Check for common SPA indicators
+	# Presence of specific div IDs or classes used by popular frameworks
+	spa_roots = ['root', 'app', '__next', 'mount']
+	for root_id in spa_roots:
+		root_element = soup.find(id=root_id)
+		if root_element:
+			root_text = root_element.get_text(strip=True)
+			# If the root element has very little text, it's likely an SPA
+			has_interactive = root_element.find(['form', 'input', 'button', 'select'])
+			if len(root_text) < 50 and not has_interactive:
+				return True
+
+
 	text_content = soup.get_text(strip=True)
 	if len(text_content) < 300:
-		return True
-	
-	# Check for noscript tags indicating JS reliance
-	noscript = soup.find('noscript')
-	if noscript and "javascript" in noscript.get_text().lower():
-		return True
+		has_inputs = soup.find(['input', 'button', 'select', 'textarea'])
+
+		if not has_inputs:
+			return True
 		
 	return False
