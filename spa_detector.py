@@ -4,8 +4,37 @@
 # In my opinion we should've just stuck with PHP and server side rendering but oh well...
 # It's not like you're actually fetching more content initially. If you want SPA performance you can make it server side rendered SPA.
 # This should save us a lot of cpu cycles and bandwidth by avoiding unnecessary JS rendering for non-SPA pages.
+# Note: This isn't perfect and may yield false positives/negatives, but it should work well enough to filter out most SPAs and save resources.
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
+import re
+
+# Constants for SPA detection thresholds
+MIN_TEXT_LENGTH_SPA = 1200
+MIN_PURE_TEXT_NON_SPA = 300
+MAX_BODY_TEXT_FOR_SHELL = 11000
+MAX_TEXT_FOR_STATIC_WITH_INPUTS = 6000
+FRAMEWORK_SIGNATURES = [
+    r'react', r'vue', r'angular', r'next', r'nuxt', r'gatsby', 
+    r'bundle\.js', r'main\.[a-z0-9]+\.js', r'chunk', r'vendor',
+    r'polymer', r'yt-player' # Added specific signatures for YouTube/Polymer
+]
+SPA_ROOTS = ['root', 'app', '__next', 'mount', 'trello-root', 'react-root', 'main-app']
+INPUT_TAGS = ['input', 'button', 'select', 'textarea']
+INTERACTIVE_TAGS = ['form'] + INPUT_TAGS
+JUNK_TAGS = ["script", "style", "noscript", "svg", "path", "canvas", "head", "meta", "link"]
+
+def extract_clean_text(html: BeautifulSoup | str) -> str:
+	if isinstance(html, str):
+		soup = BeautifulSoup(html, 'html.parser')
+	else:
+		soup = html
+
+	# Remove script, style, and junk tags
+	for tag in soup(JUNK_TAGS):
+		tag.extract()
+
+	return soup.get_text(strip=True)
 
 def detect_spa(html: BeautifulSoup | str) -> bool:
 	if isinstance(html, str):
@@ -13,29 +42,55 @@ def detect_spa(html: BeautifulSoup | str) -> bool:
 	else:
 		soup = html
 
-	# Remove script and style tags
-	for script in soup(["script", "style", "noscript"]):
-		# Remove script tags to avoid counting JS code as text
-		script.extract()
+	# If there is no JS then it's definitely not an SPA
+	script_tags = soup.find_all('script')
+	if not script_tags:
+		return False
+	
+	# Check for noscript tag indicating JS is required
+	has_blocking_noscript = False
+	noscript = soup.find('noscript')
+	if noscript:
+		noscript_text = noscript.get_text(strip=True).lower()
+		if 'enable javascript' in noscript_text or 'javascript is required' in noscript_text:
+			has_blocking_noscript = True
+	
+	# If your website doesn't have a body tag, something is very wrong
+	body = soup.find('body')
+	if not body:
+		# Not determinable, assume not an SPA, just a bad website
+		return False
+	
+	has_framework_js = False
+	for script in script_tags:
+		src = script.get('src', '')
+		if src and any(re.search(sig, src, re.IGNORECASE) for sig in FRAMEWORK_SIGNATURES):
+			has_framework_js = True
+			break
 
 	# Check for common SPA indicators
 	# Presence of specific div IDs or classes used by popular frameworks
-	spa_roots = ['root', 'app', '__next', 'mount']
-	for root_id in spa_roots:
-		root_element = soup.find(id=root_id)
+	for root_id in SPA_ROOTS:
+		root_element: Tag | None = soup.find(id=root_id)
 		if root_element:
 			root_text = root_element.get_text(strip=True)
-			# If the root element has very little text, it's likely an SPA
-			has_interactive = root_element.find(['form', 'input', 'button', 'select'])
-			if len(root_text) < 50 and not has_interactive:
+			if len(root_text) < MIN_TEXT_LENGTH_SPA:
 				return True
 
+	text_content = extract_clean_text(soup)
+	has_inputs = soup.find(INPUT_TAGS)
 
-	text_content = soup.get_text(strip=True)
-	if len(text_content) < 300:
-		has_inputs = soup.find(['input', 'button', 'select', 'textarea'])
+	if len(text_content) < MIN_PURE_TEXT_NON_SPA:
+		return True
 
-		if not has_inputs:
-			return True
+	if (has_framework_js or has_blocking_noscript) and len(text_content) < MAX_BODY_TEXT_FOR_SHELL:
+		# If it has inputs, it's likely a static login page or SSR content, not an empty shell
+		if has_inputs:
+			# If the text content is substantial, it's likely an SPA with inputs (like Trello or React docs)
+			# rather than a simple static login page (like Github login)
+			if len(text_content) > MAX_TEXT_FOR_STATIC_WITH_INPUTS:
+				return True
+			return False
+		return True
 		
 	return False
