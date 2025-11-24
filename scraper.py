@@ -3,6 +3,8 @@ from urllib.parse import urljoin
 import asyncio
 from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
+import httpx
+import spa_detector
 
 class CrawlResponse:
 	url: str
@@ -18,13 +20,90 @@ class CrawlResponse:
 	anchor_tags: list[str] = []
 	links: list[str] = []
 
-	def __init__(self, url, title, timestamp, meta_description, content_snippet, links):
+	def __init__(self, url, title, timestamp, meta_description, full_text, links):
 		self.url = url
 		self.title = title
 		self.timestamp = timestamp
 		self.meta_description = meta_description
-		self.content_snippet = content_snippet
+		self.full_text = full_text
 		self.links = links
+
+	def set_failure(self):
+		self.status_code = 0
+
+def generate_crawl_response(soup: BeautifulSoup, url: str) -> CrawlResponse:
+	title = soup.title.string if soup.title else ''
+	full_text = soup.get_text(separator='\n', strip=True)
+	meta_description_tag = soup.find('meta', attrs={'name': 'description'})
+	# Fallback rank: descrption -> og:description -> content snippet -> empty
+	if meta_description_tag:
+		meta_description = meta_description_tag['content']
+	elif soup.find('meta', attrs={'property': 'og:description'}):
+		meta_description = soup.find('meta', attrs={'property': 'og:description'})['content']
+	elif full_text:
+		## TODO: improve content snippet extraction to skip junk titles and other non-content text
+		meta_description = full_text[:160]
+	else:
+		meta_description = ""
+	timestamp = int(datetime.now().timestamp())
+	links = set()
+	for a_tag in soup.find_all('a', href=True):
+		link = a_tag['href']
+		if link.startswith('/'):
+			# Convert relative URL to absolute
+			link = urljoin(url, link)
+		if link.startswith('http'):
+			# Remove ? tracking parameters
+			link = link.split('?')[0]
+			link = link.split('#')[0]
+			link = link.lower()
+			if link.endswith('/'):
+				link = link[:-1]
+			# Avoid duplicates
+			links.add(link)
+	return CrawlResponse(
+		url=url,
+		title=title,
+		timestamp=timestamp,
+		meta_description=meta_description,
+		full_text=full_text,
+		links=list(links)
+	)
+
+async def crawl_with_httpx(url) -> CrawlResponse:
+	async with httpx.AsyncClient(timeout=1.0) as client:
+		soup = BeautifulSoup("", 'html.parser')
+		try:
+			response = await client.get(url)
+			if response.status_code != 200:
+				return CrawlResponse(
+					url=url,
+					title="",
+					timestamp=0,
+					meta_description="",
+					content_snippet="",
+					links=[]
+				)
+
+			soup = BeautifulSoup(response.text, 'html.parser')
+
+			is_spa_app = spa_detector.detect_spa(soup)
+			if is_spa_app:
+				# Skip SPA apps in this crawler
+				return await crawl_with_httpx(url)
+		except Exception as e:
+			return_response = CrawlResponse(
+				url=url,
+				title="",
+				timestamp=0,
+				meta_description="",
+				full_text="",
+				links=[]
+			)
+			return_response.set_failure()
+			return return_response
+
+		return generate_crawl_response(soup, url)
 
 async def crawl_with_playwright(url) -> CrawlResponse:
 	async with async_playwright() as p:
@@ -41,55 +120,19 @@ async def crawl_with_playwright(url) -> CrawlResponse:
 			await browser.close()
 
 			soup = BeautifulSoup(rendered_html, 'html.parser')
-
-			title = soup.title.string if soup.title else ''
-			full_text = soup.get_text(separator='\n', strip=True)
-			meta_description_tag = soup.find('meta', attrs={'name': 'description'})
-			# Fallback rank: descrption -> og:description -> content snippet -> empty
-			if meta_description_tag:
-				meta_description = meta_description_tag['content']
-			elif soup.find('meta', attrs={'property': 'og:description'}):
-				meta_description = soup.find('meta', attrs={'property': 'og:description'})['content']
-			elif full_text:
-				## TODO: improve content snippet extraction to skip junk titles and other non-content text
-				meta_description = full_text[:160]
-			else:
-				meta_description = ""
-
-			timestamp = int(datetime.now().timestamp())
-			links = set()
-			for a_tag in soup.find_all('a', href=True):
-				link = a_tag['href']
-				if link.startswith('/'):
-					# Convert relative URL to absolute
-					link = urljoin(url, link)
-				if link.startswith('http'):
-					# Remove ? tracking parameters
-					link = link.split('?')[0]
-					link = link.split('#')[0]
-					link = link.lower()
-					if link.endswith('/'):
-						link = link[:-1]
-					# Avoid duplicates
-					links.add(link)
-
-			return CrawlResponse(
-				url=url,
-				title=title,
-				timestamp=timestamp,
-				meta_description=meta_description,
-				full_text=full_text,
-				links=list(links)
-			)
-
+			return generate_crawl_response(soup, url)
 		except Exception as e:
-			print(f"An error occurred with Playwright: {e}")
-			return CrawlResponse(
-				status_code=0
+			await browser.close()
+			return_response = CrawlResponse(
+				url=url,
+				title="",
+				timestamp=0,
+				meta_description="",
+				full_text="",
+				links=[]
 			)
-		finally:
-			if browser:
-				await browser.close()
+			return_response.set_failure()
+			return return_response
 
 async def main():
 	urls = [
@@ -100,7 +143,7 @@ async def main():
 		"https://www.cnet.com/"
 	]
 	# Crawl in parallel
-	tasks = [crawl_with_playwright(url) for url in urls]
+	tasks = [crawl_with_httpx(url) for url in urls]
 	results = await asyncio.gather(*tasks)
 	for result in results:
 		print(f"URL: {result.url}")
