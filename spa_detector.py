@@ -9,6 +9,8 @@
 from bs4 import BeautifulSoup, Tag
 import re
 
+from normalize import extract_clean_text
+
 # Constants for SPA detection thresholds
 MIN_TEXT_LENGTH_SPA = 1200
 MIN_PURE_TEXT_NON_SPA = 300
@@ -18,19 +20,6 @@ FRAMEWORK_SIGNATURES = [
 	r'polymer', r'yt-player', r'ember', r'svelte'
 ]
 SPA_ROOTS = ['root', 'app', '__next', 'mount', 'trello-root', 'react-root', 'main-app']
-JUNK_TAGS = ["script", "style", "noscript", "svg", "path", "canvas", "head", "meta", "link"]
-
-def extract_clean_text(html: BeautifulSoup | str) -> str:
-	if isinstance(html, str):
-		soup = BeautifulSoup(html, 'html.parser')
-	else:
-		soup = html
-
-	# Remove script, style, and junk tags
-	for tag in soup(JUNK_TAGS):
-		tag.extract()
-
-	return soup.get_text(strip=True)
 
 def detect_spa(html: BeautifulSoup | str) -> bool:
 	if isinstance(html, str):

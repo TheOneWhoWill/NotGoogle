@@ -31,6 +31,7 @@ URL Lookup Table:
 - content_hash (String)
 - pagerank_score FLOAT
 - pagerank_updated_at TIMESTAMP
+- crawl_frequency (Integer, in days. Min 1 day, Max 100 days)
 - last_crawled (Timestamp)
 
 Robots.txt Table:
