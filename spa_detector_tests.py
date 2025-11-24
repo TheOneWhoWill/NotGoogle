@@ -27,11 +27,17 @@ async def run_tests():
 		("https://trello.com/", True),
 		("https://react.dev/", True),
 		("https://www.youtube.com/", True), # Heavy SPA
-		("https://open.spotify.com/", True), # Classic heavy SPA
-        ("https://discord.com/app", True), # The actual app, not the marketing site
-        ("https://www.figma.com/", True), # Canvas-based application
-        ("https://web.whatsapp.com/", True), # Heavy client-side logic
-        ("https://linear.app/login", True), # Modern "app-feel" login
+		("https://discord.com/app", True), # The actual app, not the marketing site
+		("https://www.figma.com/", True), # Canvas-based application
+		("https://web.whatsapp.com/", True), # Heavy client-side logic
+		("https://linear.app/login", True), # Modern "app-feel" login
+		("https://twitter.com/", True), # X/Twitter is a heavy React app
+		("https://bsky.app/", True), # Bluesky (React Native Web) - heavily client-side
+		("https://chatgpt.com/", True), # AI interfaces are almost exclusively SPAs
+		("https://outlook.live.com/mail/", True), # Microsoft OWA (Complex SPA)
+		("https://app.slack.com/client/", True), # Slack Web Client
+		("https://music.apple.com/us/browse", True), # Apple Music Web (Ember.js/JS heavy)
+		("https://codesandbox.io/", True), # IDE in browser
 
 		# Text-Heavy Static Sites (Easy)
 		("https://www.wikipedia.org/", False),
@@ -42,17 +48,28 @@ async def run_tests():
 		("https://www.kernel.org/", False), # Linux kernel source, very static
 		("https://docs.python.org/3/", False), # Documentation, static
 		("https://craigslist.org/", False), # Ancient HTML structure
-        ("https://www.w3.org/TR/html5/", False), # Massive technical spec (pure text)
-        ("https://gutenberg.org/", False), # Project Gutenberg (pure HTML archives)
-        ("https://lite.cnn.com/en", False), # CNN Lite (specifically designed for low data)
-        ("https://motherfuckingwebsite.com/", False), # Famous satire site (purest HTML)
+		("https://www.w3.org/TR/html5/", False), # Massive technical spec (pure text)
+		("https://gutenberg.org/", False), # Project Gutenberg (pure HTML archives)
+		("https://lite.cnn.com/en", False), # CNN Lite (specifically designed for low data)
+		("https://motherfuckingwebsite.com/", False), # Famous satire site (purest HTML)
+		("https://berkshirehathaway.com/", False), # The ultimate brutalist HTML site (unchanged since 90s)
+		("https://stallman.org/", False), # Richard Stallman's personal site (Pure static)
+		("https://developer.mozilla.org/en-US/", False), # MDN Web Docs (Static generation)
+		("https://doc.rust-lang.org/book/", False), # Rust Book (mdBook - static HTML)
+		("https://arxiv.org/", False), # Cornell University research archives
+		("https://www.snopes.com/", False), # Fact checking site (WordPress/PHP style)
+		("https://en.wikipedia.org/wiki/Main_Page", False), # Deep link to Wiki content
 
 		# These have < 300 chars of text but contain <form> or <input>, so they are STATIC.
 		("https://github.com/login", False),
 		("https://stackoverflow.com/users/login", False),
 		("https://duckduckgo.com/lite", False), # The non-JS version of DDG
-        ("https://old.reddit.com/login", False), # The old reddit login form
-        ("https://m.facebook.com/", False), # The mobile basic site (often form heavy, low script)
+		("https://old.reddit.com/login", False), # The old reddit login form
+		("https://m.facebook.com/", False), # The mobile basic site (often form heavy, low script)
+		("https://www.google.com/search?q=test&gbv=1", False), # Google Basic View (forced no-js)
+		("https://news.ycombinator.com/login", False), # HN Login (very simple HTML)
+		("https://en.m.wikipedia.org/w/index.php?title=Special:UserLogin", False), # Mobile Wiki Login
+		("https://archive.org/account/login", False), # Internet Archive login (often standard HTML)
 
 		# SSR Framework Sites. These have id="__next" or id="root" but contain FULL content. 
 		# We do NOT want to waste resources rendering them.
@@ -60,16 +77,25 @@ async def run_tests():
 		("https://nextjs.org/", False),
 		("https://www.airbnb.com/", False), # React-heavy but SSR'd for SEO
 		("https://remix.run/", False), # Heavily promotes SSR/Hydration
-        ("https://medium.com/", False), # React based, but content is server rendered for SEO
-        ("https://dev.to/", False), # Preact/Rails, delivers HTML first
-        ("https://www.notion.so/product", False), # Marketing page is SSR, unlike the app
-        ("https://astro.build/", False), # Astro sites ship zero JS by default usually
+		("https://medium.com/", False), # React based, but content is server rendered for SEO
+		("https://dev.to/", False), # Preact/Rails, delivers HTML first
+		("https://www.notion.so/product", False), # Marketing page is SSR, unlike the app
+		("https://astro.build/", False), # Astro sites ship zero JS by default usually
+		("https://github.com/torvalds/linux", False), # GitHub Repos are Rails SSR (Huge HTML)
+		("https://www.amazon.com/", False), # E-commerce is almost always SSR for SEO
+		("https://stackoverflow.com/", False), # Main site is ASP.NET MVC (Server Rendered)
+		("https://hashnode.com/", False), # Blogging platform (SSR Next.js)
+		("https://stripe.com/", False), # Stripe marketing (Markdoc/React SSR)
 		
 		# Edge Cases
 		("https://example.com/", False), # extremely simple HTML
 		("http://info.cern.ch/hypertext/WWW/TheProject.html", False), # The first website ever (pure HTML)
 		("https://httpbin.org/html", False), # Simple API response returning HTML
-        ("https://raw.githubusercontent.com/TheOneWhoWill/NotGoogle/refs/heads/main/README.md", False), # Raw text/markdown (no HTML tags should not trigger SPA)
+		("https://raw.githubusercontent.com/TheOneWhoWill/NotGoogle/refs/heads/main/README.md", False), # Raw text/markdown (no HTML tags should not trigger SPA)
+		("https://www.google.com/robots.txt", False), # Pure text file
+		("https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml", False), # XML Feed (Not an SPA)
+		("https://api.github.com/", False), # JSON Response (Should not trigger HTML detection)
+		("https://httpbin.org/status/404", False), # Error page (often simple HTML)
 	]
 
 	passed_tests = 0
