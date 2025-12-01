@@ -1,4 +1,3 @@
-import httpx
 import asyncio
 from normalize import normalize_webpage
 from scraper import scrape_with_httpx
