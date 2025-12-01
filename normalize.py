@@ -2,7 +2,7 @@ import re
 import spacy
 from bs4 import BeautifulSoup
 
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 
 JUNK_TAGS = ["script", "style", "noscript", "svg", "path", "canvas", "head", "meta", "link"]
 PADDING_WORDS = [
