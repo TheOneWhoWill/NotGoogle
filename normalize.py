@@ -1,5 +1,8 @@
 import re
+import spacy
 from bs4 import BeautifulSoup
+
+nlp = spacy.load("en_core_web_sm")
 
 JUNK_TAGS = ["script", "style", "noscript", "svg", "path", "canvas", "head", "meta", "link"]
 PADDING_WORDS = [
@@ -21,13 +24,16 @@ def extract_clean_text(html: BeautifulSoup | str) -> str:
 	return soup.get_text(separator=" ", strip=True)
 
 def tokenize_text(text: str) -> list[str]:
-	# Split into each word removing spaces, newlines, tabs, and punctuation
-	words = re.split(r'\W+', text)
-	words = [word.lower() for word in words if word]
-	# If a word ends with an apostrophe followed by s, remove the apostrophe s
-	words = [re.sub(r"\'s$", "", word) for word in words]
-	# If a word is in ing form (e.g., running, jumping),
-	return words
+	doc = nlp(text)
+	tokens = []
+	for token in doc:
+		if token.is_punct or token.is_space:
+			continue
+		lemma = token.lemma_.lower().strip()
+		if not lemma or not lemma.isalpha():
+			continue
+		tokens.append(lemma)
+	return tokens
 
 def normalize_webpage(html: BeautifulSoup | str) -> list[str]:
 	if isinstance(html, str):
