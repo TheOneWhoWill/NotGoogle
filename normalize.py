@@ -24,6 +24,9 @@ def tokenize_text(text: str) -> list[str]:
 	# Split into each word removing spaces, newlines, tabs, and punctuation
 	words = re.split(r'\W+', text)
 	words = [word.lower() for word in words if word]
+	# If a word ends with an apostrophe followed by s, remove the apostrophe s
+	words = [re.sub(r"\'s$", "", word) for word in words]
+	# If a word is in ing form (e.g., running, jumping),
 	return words
 
 def normalize_webpage(html: BeautifulSoup | str) -> list[str]:
